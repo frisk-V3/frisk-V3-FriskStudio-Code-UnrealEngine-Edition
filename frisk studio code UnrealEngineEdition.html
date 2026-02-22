@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>FriskStudio Code – UnrealEngine Edition</title>
+
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #0f0f14;
+    color: #e5e5e5;
+    font-family: "Segoe UI", system-ui, sans-serif;
+  }
+
+  /* UE 専用ヘッダー */
+  .header {
+    padding: 14px 20px;
+    font-size: 20px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    background: linear-gradient(90deg, #1b2838, #2f4b7c);
+    box-shadow: 0 3px 10px #0008;
+  }
+
+  /* 言語カード（UE のみ） */
+  #language-screen {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+  }
+
+  .lang-card {
+    padding: 14px;
+    border-radius: 10px;
+    background: radial-gradient(circle at top left, #2f4b7c, #10141c);
+    border: 1px solid #2f4b7c;
+    color: #fff;
+    cursor: pointer;
+    transition: 0.2s;
+    box-shadow: 0 0 10px #0006;
+  }
+  .lang-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px #0009;
+    border-color: #7ec7ff;
+  }
+  .lang-name {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  /* エディタ画面 */
+  #editor-screen {
+    height: calc(100vh - 52px);
+    display: none;
+    flex-direction: column;
+  }
+
+  .editor-top {
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #1b2838;
+    border-bottom: 2px solid #2f4b7c;
+    font-size: 14px;
+  }
+
+  #editor-area {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+
+  #editor-container {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Blueprint Viewer */
+  #bp-pane {
+    width: 40%;
+    min-width: 260px;
+    background: #0f1117;
+    border-left: 3px solid #2f4b7c;
+    display: none;
+    flex-direction: column;
+  }
+
+  #bp-pane-header {
+    padding: 6px 10px;
+    background: #1b2838;
+    border-bottom: 1px solid #2f4b7c;
+    font-weight: 600;
+  }
+
+  #bp-pane-body {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+
+  #bp-text, #bp-nodes {
+    flex: 1;
+    padding: 8px;
+    overflow: auto;
+    font-size: 12px;
+  }
+
+  #bp-text {
+    background: #111319;
+    border-right: 1px solid #222;
+  }
+
+  #bp-nodes {
+    background: #0b0d12;
+  }
+
+  .bp-line {
+    padding: 2px 0;
+    border-bottom: 1px dashed #333;
+    white-space: pre;
+  }
+
+  .bp-node {
+    display: inline-block;
+    padding: 6px 10px;
+    margin: 4px;
+    border-radius: 6px;
+    background: #1b2838;
+    border: 1px solid #2f4b7c;
+    box-shadow: 0 2px 6px #0008;
+  }
+
+  .bp-node-title {
+    font-weight: 600;
+    margin-bottom: 2px;
+    color: #7ec7ff;
+  }
+
+  .bp-node-body {
+    font-size: 11px;
+    color: #ddd;
+  }
+
+  /* UE C++ テンプレ選択パネル */
+  #ue-panel {
+    display: none;
+    padding: 6px 12px;
+    background: #10141c;
+    border-bottom: 1px solid #2f4b7c;
+    font-size: 12px;
+    align-items: center;
+    gap: 8px;
+  }
+
+  #ue-panel select {
+    background: #1b2838;
+    color: #e5e5e5;
+    border-radius: 4px;
+    border: 1px solid #2f4b7c;
+    padding: 3px 6px;
+    font-size: 12px;
+  }
+
+  /* 設定ボタン */
+  .settings-btn {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    width: 55px;
+    height: 55px;
+    background: #2f4b7c;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 26px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px #0008;
+    color: #fff;
+    z-index: 20;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>FriskStudio Code – UnrealEngine Edition</div>
+  <div style="font-size:12px;opacity:0.8;">Unreal Engine 専用 IDE</div>
+</div>
+
+<!-- ========================= -->
+<!--   UE 言語選択画面        -->
+<!-- ========================= -->
+<div id="language-screen">
+
+  <!-- Unreal C++ -->
+  <div class="lang-card" onclick="selectLanguage('uecpp')">
+    <div class="lang-name">Unreal C++</div>
+    <div>Actor / Component / Pawn / Character / GameMode / BFL / Widget</div>
+  </div>
+
+  <!-- UE Build.cs -->
+  <div class="lang-card" onclick="selectLanguage('uebuild')">
+    <div class="lang-name">UE Build.cs</div>
+    <div>モジュール設定</div>
+  </div>
+
+  <!-- UE Target.cs -->
+  <div class="lang-card" onclick="selectLanguage('uetarget')">
+    <div class="lang-name">UE Target.cs</div>
+    <div>ターゲット設定</div>
+  </div>
+
+  <!-- UE INI -->
+  <div class="lang-card" onclick="selectLanguage('ueini')">
+    <div class="lang-name">UE INI</div>
+    <div>DefaultEngine.ini など</div>
+  </div>
+
+  <!-- Blueprint -->
+  <div class="lang-card" onclick="selectLanguage('blueprint')">
+    <div class="lang-name">Blueprint</div>
+    <div>テキスト + ノードビュー</div>
+  </div>
+
+</div>
+<!-- ========================= -->
+<!--   エディタ画面（共通）   -->
+<!-- ========================= -->
+<div id="editor-screen">
+
+  <div class="editor-top">
+    <div id="editor-title">Editor</div>
+    <button class="btn" id="downloadBtn">DL</button>
+  </div>
+
+  <!-- Unreal C++ テンプレ選択パネル -->
+  <div id="ue-panel">
+    <span>Unreal C++ テンプレート:</span>
+    <select id="ue-template-select">
+      <option value="actor">Actor</option>
+      <option value="component">Component</option>
+      <option value="pawn">Pawn</option>
+      <option value="character">Character</option>
+      <option value="gamemode">GameMode</option>
+      <option value="bfl">BlueprintFunctionLibrary</option>
+      <option value="widget">Widget (UMG)</option>
+    </select>
+  </div>
+
+  <!-- エディタ + Blueprint Viewer -->
+  <div id="editor-area">
+
+    <!-- Monaco Editor -->
+    <div id="editor-container"></div>
+
+    <!-- Blueprint Viewer -->
+    <div id="bp-pane">
+      <div id="bp-pane-header">Blueprint Viewer（テキスト + ノード）</div>
+      <div id="bp-pane-body">
+        <div id="bp-text"></div>
+        <div id="bp-nodes"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 設定ボタン -->
+<div id="settingsBtn" class="settings-btn">⚙</div>
+
+<!-- 設定モーダル -->
+<div id="settingsModal" class="modal-backdrop">
+  <div class="modal">
+    <h2>設定</h2>
+
+    <div class="modal-section">
+      <strong>テーマ</strong>
+      <div class="switch-row">
+        <label for="themeDark">ダークモード</label>
+        <input type="radio" name="theme" id="themeDark" value="dark" checked>
+      </div>
+      <div class="switch-row">
+        <label for="themeLight">ホワイトモード</label>
+        <input type="radio" name="theme" id="themeLight" value="light">
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <strong>ファイル保存</strong>
+      <div class="switch-row">
+        <label for="overwriteToggle">読み込んだファイルを上書きする</label>
+        <input type="checkbox" id="overwriteToggle" checked>
+      </div>
+    </div>
+
+    <div style="text-align:right;margin-top:8px;">
+      <button class="btn" onclick="closeSettings()">閉じる</button>
+    </div>
+  </div>
+</div>
+<!-- ========================= -->
+<!--   UnrealEngine 専用 JS   -->
+<!-- ========================= -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.0/min/vs/loader.min.js"></script>
+
+<script>
+/* ------------------------------
+   Monaco Editor 初期化
+------------------------------ */
+window.monacoReady = false;
+window.monacoQueue = [];
+
+require.config({
+  paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.0/min/vs' }
+});
+
+require(['vs/editor/editor.main'], function () {
+  window.monacoReady = true;
+  window.monacoQueue.forEach(fn => fn());
+  window.monacoQueue = [];
+});
+
+/* ------------------------------
+   Unreal C++ テンプレート
+------------------------------ */
+const ueCppTemplates = {
+
+actor:
+`// Unreal Engine Actor Template
+#include "MyActor.h"
+#include "GameFramework/Actor.h"
+
+AMyActor::AMyActor()
+{
+    PrimaryActorTick.bCanEverTick = true;
+}
+
+void AMyActor::BeginPlay()
+{
+    Super::BeginPlay();
+}
+
+void AMyActor::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+}
+`,
+
+component:
+`// Unreal Engine Component Template
+#include "MyComponent.h"
+#include "Components/ActorComponent.h"
+
+UMyComponent::UMyComponent()
+{
+    PrimaryComponentTick.bCanEverTick = true;
+}
+
+void UMyComponent::BeginPlay()
+{
+    Super::BeginPlay();
+}
+
+void UMyComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+}
+`,
+
+pawn:
+`// Unreal Engine Pawn Template
+#include "MyPawn.h"
+#include "GameFramework/Pawn.h"
+
+AMyPawn::AMyPawn()
+{
+    PrimaryActorTick.bCanEverTick = true;
+}
+
+void AMyPawn::BeginPlay()
+{
+    Super::BeginPlay();
+}
+
+void AMyPawn::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+}
+`,
+
+character:
+`// Unreal Engine Character Template
+#include "MyCharacter.h"
+#include "GameFramework/Character.h"
+
+AMyCharacter::AMyCharacter()
+{
+    PrimaryActorTick.bCanEverTick = true;
+}
+
+void AMyCharacter::BeginPlay()
+{
+    Super::BeginPlay();
+}
+
+void AMyCharacter::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+}
+`,
+
+gamemode:
+`// Unreal Engine GameMode Template
+#include "MyGameModeBase.h"
+#include "GameFramework/GameModeBase.h"
+
+AMyGameModeBase::AMyGameModeBase()
+{
+}
+`,
+
+bfl:
+`// Unreal Engine BlueprintFunctionLibrary Template
+#include "MyBlueprintFunctionLibrary.h"
+
+FString UMyBlueprintFunctionLibrary::HelloFriskStudio()
+{
+    return TEXT("Hello FriskStudio Code – UnrealEngine Edition");
+}
+`,
+
+widget:
+`// Unreal Engine UUserWidget Template
+#include "MyUserWidget.h"
+#include "Blueprint/UserWidget.h"
+
+bool UMyUserWidget::Initialize()
+{
+    if (!Super::Initialize())
+    {
+        return false;
+    }
+    return true;
+}
+`
+};
+
+/* ------------------------------
+   言語マッピング
+------------------------------ */
+function mapLanguage(lang) {
+  const map = {
+    uecpp:   "cpp",
+    uebuild: "csharp",
+    uetarget:"csharp",
+    ueini:   "ini",
+    blueprint:"plaintext"
+  };
+  return map[lang] || "plaintext";
+}
+
+/* ------------------------------
+   言語名
+------------------------------ */
+function displayName(lang) {
+  const map = {
+    uecpp: "Unreal C++",
+    uebuild: "UE Build.cs",
+    uetarget: "UE Target.cs",
+    ueini: "UE INI",
+    blueprint: "Blueprint"
+  };
+  return map[lang] || lang;
+}
+
+/* ------------------------------
+   拡張子
+------------------------------ */
+function getExtLabel(lang) {
+  const map = {
+    uecpp: ".cpp",
+    uebuild: ".Build.cs",
+    uetarget: ".Target.cs",
+    ueini: ".ini",
+    blueprint: ".bp.txt"
+  };
+  return map[lang] || ".txt";
+}
+
+/* ------------------------------
+   デフォルトコード
+------------------------------ */
+function getDefaultCode(lang) {
+
+  if (lang === "uecpp") {
+    return ueCppTemplates.actor;
+  }
+
+  if (lang === "uebuild") {
+    return `// Unreal Engine Module Build.cs Template
+using UnrealBuildTool;
+
+public class MyModule : ModuleRules
+{
+    public MyModule(ReadOnlyTargetRules Target) : base(Target)
+    {
+        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+
+        PublicDependencyModuleNames.AddRange(
+            new string[]
+            {
+                "Core",
+                "CoreUObject",
+                "Engine",
+                "InputCore"
+            }
+        );
+    }
+}
+`;
+  }
+
+  if (lang === "uetarget") {
+    return `// Unreal Engine Target.cs Template
+using UnrealBuildTool;
+using System.Collections.Generic;
+
+public class MyProjectTarget : TargetRules
+{
+    public MyProjectTarget(TargetInfo Target) : base(Target)
+    {
+        Type = TargetType.Game;
+        DefaultBuildSettings = BuildSettingsVersion.V2;
+        ExtraModuleNames.Add("MyProject");
+    }
+}
+`;
+  }
+
+  if (lang === "ueini") {
+    return `[/Script/Engine.Engine]
+GameViewportClientClassName=/Script/Engine.GameViewportClient
+
+[/Script/EngineSettings.GameMapsSettings]
+GameDefaultMap=/Game/Maps/ExampleMap
+EditorStartupMap=/Game/Maps/ExampleMap
+`;
+  }
+
+  if (lang === "blueprint") {
+    return `Event BeginPlay
+    PrintString "Hello FriskStudio Code – UnrealEngine Edition"
+
+Event Tick
+    Sequence
+        Branch (Condition: IsValid)
+            True:  PrintString "Tick True"
+            False: PrintString "Tick False"
+`;
+  }
+
+  return "";
+}
+</script>
+<script>
+
+/* ------------------------------
+   言語選択
+------------------------------ */
+let currentLang = null;
+let editor = null;
+let currentTheme = "dark";
+
+function selectLanguage(lang) {
+  currentLang = lang;
+
+  document.getElementById("language-screen").style.display = "none";
+  document.getElementById("editor-screen").style.display = "flex";
+
+  document.getElementById("editor-title").textContent = displayName(lang);
+  document.getElementById("downloadBtn").textContent = "DL " + getExtLabel(lang);
+
+  const isUECpp = (lang === "uecpp");
+  const isBlueprint = (lang === "blueprint");
+
+  document.getElementById("ue-panel").style.display = isUECpp ? "flex" : "none";
+  document.getElementById("bp-pane").style.display = isBlueprint ? "flex" : "none";
+
+  initMonacoEditor();
+}
+
+/* ------------------------------
+   Monaco Editor 初期化
+------------------------------ */
+function initMonacoEditor() {
+  const run = () => {
+    const langId = mapLanguage(currentLang);
+    const value = getDefaultCode(currentLang);
+
+    if (!editor) {
+      editor = monaco.editor.create(
+        document.getElementById("editor-container"),
+        {
+          value,
+          language: langId,
+          theme: currentTheme === "dark" ? "vs-dark" : "vs",
+          automaticLayout: true
+        }
+      );
+
+      editor.onDidChangeModelContent(() => {
+        if (currentLang === "blueprint") updateBlueprintView();
+      });
+
+    } else {
+      monaco.editor.setModelLanguage(editor.getModel(), langId);
+      editor.setValue(value);
+      monaco.editor.setTheme(currentTheme === "dark" ? "vs-dark" : "vs");
+    }
+
+    if (currentLang === "blueprint") updateBlueprintView();
+  };
+
+  if (window.monacoReady) run();
+  else window.monacoQueue.push(run);
+}
+
+/* ------------------------------
+   Blueprint Viewer
+------------------------------ */
+function updateBlueprintView() {
+  if (!editor) return;
+
+  const code = editor.getValue();
+  const lines = code.split(/\r?\n/);
+
+  const bpText = document.getElementById("bp-text");
+  const bpNodes = document.getElementById("bp-nodes");
+
+  bpText.innerHTML = "";
+  bpNodes.innerHTML = "";
+
+  lines.forEach((line, i) => {
+    const t = line.trim();
+    if (!t) return;
+
+    // テキスト側
+    const div = document.createElement("div");
+    div.className = "bp-line";
+    div.textContent = (i + 1) + ": " + t;
+    bpText.appendChild(div);
+
+    // ノード側
+    const node = document.createElement("div");
+    node.className = "bp-node";
+
+    const title = document.createElement("div");
+    title.className = "bp-node-title";
+
+    const body = document.createElement("div");
+    body.className = "bp-node-body";
+
+    if (/^Event\s+/i.test(t)) {
+      title.textContent = "Event";
+      body.textContent = t.replace(/^Event\s+/i, "");
+    } else if (/PrintString/i.test(t)) {
+      title.textContent = "PrintString";
+      body.textContent = t;
+    } else if (/Branch/i.test(t)) {
+      title.textContent = "Branch";
+      body.textContent = t;
+    } else if (/Sequence/i.test(t)) {
+      title.textContent = "Sequence";
+      body.textContent = t;
+    } else {
+      title.textContent = "Node";
+      body.textContent = t;
+    }
+
+    node.appendChild(title);
+    node.appendChild(body);
+    bpNodes.appendChild(node);
+  });
+}
+
+/* ------------------------------
+   Unreal C++ テンプレ切替
+------------------------------ */
+document.getElementById("ue-template-select").addEventListener("change", () => {
+  if (!editor) return;
+  if (currentLang !== "uecpp") return;
+
+  const key = document.getElementById("ue-template-select").value;
+  editor.setValue(ueCppTemplates[key] || ueCppTemplates.actor);
+});
+
+/* ------------------------------
+   設定
+------------------------------ */
+document.getElementById("settingsBtn").addEventListener("click", () => {
+  document.getElementById("settingsModal").style.display = "flex";
+});
+
+function closeSettings() {
+  document.getElementById("settingsModal").style.display = "none";
+}
+
+document.getElementById("themeDark").addEventListener("change", () => {
+  currentTheme = "dark";
+  document.body.classList.remove("light");
+  if (editor) monaco.editor.setTheme("vs-dark");
+});
+
+document.getElementById("themeLight").addEventListener("change", () => {
+  currentTheme = "light";
+  document.body.classList.add("light");
+  if (editor) monaco.editor.setTheme("vs");
+});
+
+/* ------------------------------
+   ダウンロード
+------------------------------ */
+document.getElementById("downloadBtn").addEventListener("click", () => {
+  if (!editor) return;
+
+  const blob = new Blob([editor.getValue()], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "code" + getExtLabel(currentLang);
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+</script>
+
+</body>
+</html>
